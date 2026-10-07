@@ -1,0 +1,10 @@
+agent.py
+cli.py
+files.py
+pyproject.toml
+trace.py
+multimodal_file_sandbox.egg-info/PKG-INFO
+multimodal_file_sandbox.egg-info/SOURCES.txt
+multimodal_file_sandbox.egg-info/dependency_links.txt
+multimodal_file_sandbox.egg-info/requires.txt
+multimodal_file_sandbox.egg-info/top_level.txt
