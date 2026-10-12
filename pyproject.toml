@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A controlled experiment for multimodal prompt injection in a file retrieval agent."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = ["langchain", "langchain-openai", "langchain-ollama", "python-dotenv", "pydantic"]
+dependencies = ["langchain", "langchain-openai", "langchain-ollama", "python-dotenv", "pydantic", "Pillow>=11,<13"]
 
 
 [build-system]
@@ -12,4 +12,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["agent", "cli", "files", "trace", "check_connection", "judge", "experiment", "models", "generator"]
+py-modules = ["agent", "cli", "files", "trace", "check_connection", "judge", "experiment", "ideal", "render", "models", "generator"]

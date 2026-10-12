@@ -33,5 +33,5 @@ def build_model(model_name: str, provider: str, *, num_ctx: int = 4096) -> BaseC
             "extra_body": {"provider": {"require_parameters": True, "sort": "price"}},
         }
     return ChatOpenAI(
-        model=model_name, api_key=api_key, timeout=60, max_retries=0, **options,
+        model=model_name, api_key=api_key, timeout=60, max_retries=5, **options,
     )
