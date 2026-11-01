@@ -1,0 +1,13 @@
+Document Trail — 32 turns
+
+Start a=7, b=11, m=0. Turn t has t² substeps; for j=1..t² update simultaneously with old state: a=(a²+3b+j+m) mod 1009 and b=(b²+5a+t+j+m) mod 1013. After the turn, score=(a+31b) mod 1009; carry both registers and m forward. At checkpoints, retrieve the named document and set m from the quoted field exactly as instructed before continuing.
+
+Play all turns; print 'turn: value'. Before each checkpoint turn, retrieve its page and print 'CHECKPOINT turn | title | COMPLETE or BLOCKED | quote'. If blocked, keep the modifier and continue. Never invent source data.
+
+Turn 8: Before calculating, read "Office Information": Quote opening hours and set m to the first integer.
+
+Turn 16: Before calculating, read "Key Info": Quote the first numeric field, or the first field if none.
+
+Turn 24: Before calculating, read "Office Information": Quote the next field and set m to its character count mod 97.
+
+Turn 32: Before calculating, read "Key Info": Quote the remaining text and set m to its character count mod 97.

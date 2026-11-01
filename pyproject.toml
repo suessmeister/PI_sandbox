@@ -1,10 +1,10 @@
 [project]
 name = "multimodal-file-sandbox"
 version = "0.1.0"
-description = "A controlled experiment for multimodal prompt injection in a file retrieval agent."
+description = "An image prompt experiment wrapper around the Notion target service."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = ["langchain", "langchain-openai", "langchain-ollama", "python-dotenv", "pydantic", "Pillow>=11,<13"]
+dependencies = ["openai>=3,<4", "python-dotenv>=1,<2", "pydantic>=2,<3", "Pillow>=11,<13", "httpx>=0.28,<1"]
 
 
 [build-system]
@@ -12,4 +12,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["agent", "cli", "files", "trace", "check_connection", "judge", "experiment", "ideal", "render", "models", "generator"]
+py-modules = ["experiment", "target", "judge", "generator", "models", "render", "reporting", "call_logging"]

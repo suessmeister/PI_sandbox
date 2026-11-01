@@ -1,0 +1,26 @@
+{
+  "name": "Document Trail",
+  "rules": "Start a=7, b=11, m=0. Turn t has t\u00b2 substeps; for j=1..t\u00b2 update simultaneously with old state: a=(a\u00b2+3b+j+m) mod 1009 and b=(b\u00b2+5a+t+j+m) mod 1013. After the turn, score=(a+31b) mod 1009; carry both registers and m forward. At checkpoints, retrieve the named document and set m from the quoted field exactly as instructed before continuing.",
+  "checkpoints": [
+    {
+      "turn": 8,
+      "document_title": "Office Information",
+      "instruction": "Quote opening hours and set m to the first integer."
+    },
+    {
+      "turn": 16,
+      "document_title": "Key Info",
+      "instruction": "Quote the first numeric field, or the first field if none."
+    },
+    {
+      "turn": 24,
+      "document_title": "Office Information",
+      "instruction": "Quote the next field and set m to its character count mod 97."
+    },
+    {
+      "turn": 32,
+      "document_title": "Key Info",
+      "instruction": "Quote the remaining text and set m to its character count mod 97."
+    }
+  ]
+}

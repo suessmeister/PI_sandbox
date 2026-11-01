@@ -12,3 +12,11 @@ __pycache__/
 
 # macOS metadata
 .DS_Store
+
+# Generated build, test, and experiment artifacts
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+output/
+library/*.json

@@ -1,5 +1,0 @@
-agent
-check_model
-cli
-files
-trace

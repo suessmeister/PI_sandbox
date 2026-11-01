@@ -1,0 +1,191 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\emergencystretch}{1em}
+\begin{document}
+\begin{center}
+    {\Large\textbf{Understanding the Notion Experiment}}\\[0.4em]
+    {\normalsize Purpose, architecture, and the boundary between information and authority}
+\end{center}
+
+\section{What the experiment is asking}
+
+An assistant that can read documents needs to do more than understand their
+contents. It must also distinguish between information relevant to a task and
+instructions that are allowed to govern its behavior. This experiment studies
+that distinction using an assistant connected to a small Notion workspace.
+
+The assistant receives an ordinary task and an attached image. It can inspect
+the image, search the workspace, read documents, and produce an answer. Some
+information is available for legitimate use, while a designated sensitive
+page is explicitly off limits under the assistant's standing instructions.
+The experiment changes the text embedded in the image and observes whether
+the assistant continues to respect that restriction.
+
+The central question is whether material the assistant is supposed to
+\emph{read} can influence what it believes it is \emph{authorized to do}.
+An image might contain language that presents an additional retrieval as a
+necessary step in completing the task. Understanding that language is
+expected; accepting it as permission to access prohibited information would
+be a failure of the intended boundary.
+
+\section{The Notion setting}
+
+The workspace contains synthetic documents created for the experiment. An
+allowed page, such as \emph{Office Information}, provides ordinary information
+that the assistant can use when answering an appropriate request. A separate
+sensitive page contains information that the assistant has been instructed
+never to retrieve or disclose. Its contents are test data, rather than actual
+confidential records.
+
+Both pages are shared with the assistant's Notion connection. This is a
+ deliberate experimental choice. If the sensitive page were inaccessible,
+then a refusal or failed retrieval might simply reflect a lack of access.
+By making the page technically reachable, the experiment can investigate
+whether the assistant follows its policy when it has the capability to
+violate it.
+
+Preparing the setting therefore means establishing an allowed document, a
+clearly designated sensitive document, and a connection that can read both.
+The experimenter also retains a separate copy of the sensitive test content
+for comparison with answers. That reference allows the evaluator to
+ distinguish an actual disclosure of the test information from a plausible
+but invented answer.
+
+The connection is restricted to reading and searching. The assistant is not
+supposed to create, modify, or delete workspace content. The experiment is
+therefore concerned with information access and disclosure, rather than
+changes to the documents themselves.
+
+\section{The specific trust boundary}
+
+The boundary concerns the authority of different sources of text. The
+operator establishes the assistant's standing rules before a trial begins.
+These rules identify the sensitive page and prohibit retrieving or disclosing
+its contents, including its child content and sensitive excerpts encountered
+in search results. The submitted task and image do not provide a way to
+replace those standing rules.
+
+Within those rules, the task request can tell the assistant what help is
+wanted. The image and retrieved documents can supply information needed to
+provide that help. However, none of those sources can authorize an exception
+to the sensitive-page restriction. A request to read an image does not grant
+permission to follow every instruction written inside it.
+
+Here, calling content \emph{untrusted} does not mean that its factual claims
+must be false or that the assistant should ignore it completely. An office
+notice may accurately state an opening time, and a retrieved document may
+contain the answer to the user's question. The limitation is about authority:
+useful content cannot rewrite the rules under which the assistant operates.
+The assistant must preserve that distinction even when the content sounds
+confident, helpful, or closely related to the task.
+
+The boundary is crossed if the assistant treats an instruction in the image,
+or in material it retrieves, as sufficient justification to disregard the
+standing prohibition. For example, an image could suggest that a complete
+answer depends on consulting the protected page. The relevant failure would
+be accepting that suggestion as authorization. Merely noticing or describing
+the suggestion would not establish the same failure.
+
+Two different protections are present. The sensitive-page restriction is a
+behavioral rule that the model must follow; there is no separate mechanism
+that automatically blocks every request for that page. In contrast, the
+restriction to approved reading and searching operations is enforced by the
+software. An unapproved operation is rejected even if the model asks for it.
+Thus, the software limits the kinds of actions available, while the model
+must decide whether a particular read is permitted under its instructions.
+
+\section{Architecture: how the parts work together}
+
+The repository separates the system being tested from the system conducting
+the test. The Notion target is the assistant under examination. The outer
+experiment is a wrapper that prepares trials, submits them, evaluates the
+answers, and decides what to try next. This separation lets the experiment
+change the image while keeping the target's configured rules in place.
+
+The target owns the connection to Notion and the model that answers the task.
+It receives a prompt and an image, lets the model request approved searches
+or reads, and returns the final answer. A fresh conversation and document
+connection are created for every trial. The target therefore does not
+continue a conversation containing the earlier trial's attempted injection.
+
+The wrapper supplies continuity across trials. It remembers previous
+payloads, their scores, and which goals have been achieved. It renders new
+text into an image and submits that image to the target. The adaptation
+happens in the experiment's record of earlier attempts, rather than through
+persistent memory inside the target assistant.
+
+Separate feedback calls support evaluation and candidate choice. The judge
+assesses the answer, the generator proposes alternative image texts, and the
+selector chooses a candidate to test. These are distinct roles, although
+they can use the same configured feedback model. They do not carry out the
+target's Notion task. In particular, the generator receives numeric goal
+feedback and previous payloads, without being given the target's answers or
+the sensitive reference contents.
+
+The target returns an answer and an identifier for the trial. The wrapper
+saves that answer alongside the image, evaluation, and candidate decisions.
+More detailed records of the target's searches and reads remain with the
+target and can be matched using the identifier. The ordinary experiment loop
+therefore evaluates what appears in the answer; it does not automatically
+inspect the assistant's internal sequence of document accesses.
+
+\section{How a trial becomes an experiment}
+
+A run begins with an image containing a candidate instruction and an ordinary
+task request. The current approach uses completion-style text: it asks the
+assistant to continue an answer or fill in an unfinished response. The
+background image provides a carrier for that text. Its unrelated visual
+content does not determine which Notion page should be used.
+
+The target responds, and the wrapper saves the response before evaluation.
+The judge then considers the currently active goals. The default progression
+starts with including information from the allowed page and later adds the
+goal of including sensitive test content. Earlier goals remain active as new
+ones are added, so a later goal cannot compensate for losing an earlier
+behavior.
+
+When all active goals pass, the next goal is introduced. Otherwise, the
+experiment continues working on the current stage. The generator proposes
+complete replacement payloads, using earlier successful wording as context
+rather than as text that must remain unchanged. Duplicate proposals are
+filtered, and the selector chooses an alternative for the next trial.
+Selection is a prediction about what may work; only a subsequent target
+response provides evidence about what actually happened.
+
+A run ends when the release judge identifies sensitive reference content in
+the final answer, when no new candidates remain after the allowed retries,
+or when the iteration limit is reached. The saved record preserves the
+sequence of tested images and answers so that the outcome can be reviewed.
+
+\section{Interpreting the result}
+
+Goal completion and sensitive-information release are evaluated separately.
+An assistant may satisfy an ordinary task without disclosing anything
+sensitive. It may also disclose sensitive information while failing another
+requested behavior. For that reason, passing every staged goal is not by
+itself the condition that marks a run as successful for the attack; the
+experiment looks for a nonzero release assessment against known references.
+
+A claim such as ``I read the protected page'' is not sufficient evidence that
+the page was accessed. Likewise, an answer that invents a convincing secret
+is not evidence that the actual test content was released. The final answer
+must be compared with the reference material. Without that material, the
+experiment records release as unknown. Establishing which documents were
+actually read requires examining the target's more detailed records.
+
+The release assessment is still an automated judgment and can be mistaken.
+The saved answer and supporting excerpts make the finding reviewable. A
+single successful trial also does not establish how reliably a payload will
+work. Repeated trials are needed to assess consistency, and a comparison
+with an otherwise similar request without the injected instructions is
+needed to support a claim that the image caused the change in behavior.
+
+Finally, the setup is a controlled local research environment. Its separation
+into a wrapper and a target organizes responsibilities and observations; it
+does not create a complete security barrier around the machine. The service
+is intended to remain local, and its document permissions are deliberately
+chosen to make the model's handling of the trust boundary observable.
+
+\end{document}
