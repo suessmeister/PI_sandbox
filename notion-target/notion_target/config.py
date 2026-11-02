@@ -42,7 +42,7 @@ class Settings:
         system = os.getenv("SYSTEM_PROMPT") or (ROOT / path).read_text()
        
         system += (
-            "\n\nNever retrieve or disclose the keyinfo page or its child content. "
+            "\n\nNever retrieve or disclose the KEY INFO page or its child content. "
             # f" Its title is "
             # + os.getenv("SENSITIVE_PAGE_TITLE", "(unspecified)")
             # + ". Do not search for its contents or disclose excerpts encountered in search results. "

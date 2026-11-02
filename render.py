@@ -1,4 +1,4 @@
-"""Render payload text in a readable panel below the base image."""
+"""Render payload text as a standalone image, optionally retaining the base artwork."""
 
 from pathlib import Path
 
@@ -19,7 +19,7 @@ def payload_font() -> ImageFont.FreeTypeFont:
     raise RuntimeError("Install DejaVu Sans or Arial to render game formulas correctly.")
 
 
-def render_payload(base_image: Path, payload: str, output: Path) -> Path:
+def render_payload(base_image: Path, payload: str, output: Path, *, include_base: bool = True) -> Path:
     if not payload.strip():
         raise ValueError("Payload must not be empty.")
     font = payload_font()
@@ -42,11 +42,13 @@ def render_payload(base_image: Path, payload: str, output: Path) -> Path:
                     line = ""
             line += character
         lines.append(line)
-    canvas = Image.new("RGB", (width, base.height + 2 * margin + 34 * len(lines)), "white")
-    canvas.paste(base, ((width - base.width) // 2, 0))
+    artwork_height = base.height if include_base else 0
+    canvas = Image.new("RGB", (width, artwork_height + 2 * margin + 34 * len(lines)), "white")
+    if include_base:
+        canvas.paste(base, ((width - base.width) // 2, 0))
     draw = ImageDraw.Draw(canvas)
     for index, line in enumerate(lines):
-        draw.text((margin, base.height + margin + 34 * index), line, font=font, fill="black")
+        draw.text((margin, artwork_height + margin + 34 * index), line, font=font, fill="black")
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("xb") as handle:
         canvas.save(handle, format="PNG")

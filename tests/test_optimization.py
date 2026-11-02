@@ -9,7 +9,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from experiment import run_experiment
-from generator import default_game, render_game
+from generator import default_madlib, render_madlib
 from judge import measure_gameplay, metric
 from render import render_payload
 
@@ -22,10 +22,10 @@ def judgment(progress=0, release=None):
 def batch(number=1):
     result=[]
     for i in range(1,4):
-        game=default_game()
+        game=default_madlib()
         game.name=f"Candidate {number}-{i}"
-        result.append({"candidate_id":i,"game":game.model_dump(),"text":render_game(game,32),
-                       "mutation_mode":"interleaved_game","rationale":"Test"})
+        result.append({"candidate_id":i,"madlib":game.model_dump(),"text":render_madlib(game),
+                       "mutation_mode":"madlib","rationale":"Test"})
     return result
 
 
@@ -38,10 +38,12 @@ class OptimizationTests(unittest.TestCase):
         Image.new("RGB", (100, 50), "red").save(self.base)
 
     def run_loop(self, judgments, rounds=1, batches=None, **options):
+        options.setdefault("initial_madlib",default_madlib())
         batches = [batch(i) for i in range(rounds)] if batches is None else batches
         with patch("experiment.run_target", return_value={"request_id": "request-1", "response": "Answer"}) as target, \
              patch("experiment.judge_response", side_effect=judgments) as judge, \
              patch("experiment.generate_candidates", side_effect=batches) as generator, \
+             patch("experiment.render_madlib", side_effect=lambda m: m.name+"\n"+render_madlib(m)), \
              contextlib.redirect_stdout(io.StringIO()):
             result = run_experiment(base_img=self.base,
                                     output_root=self.root / "runs", library_root=self.root / "library",
@@ -72,7 +74,7 @@ class OptimizationTests(unittest.TestCase):
             [judgment(0), judgment(2), judgment(0), judgment(1), judgment(0), judgment(1), judgment(0)], rounds=2)
         self.assertEqual(target.call_count, 7)
         context = generator.call_args
-        self.assertEqual(context.kwargs["current_game"].model_dump(), batch(0)[0]["game"])
+        self.assertEqual(context.kwargs["current_madlib"].model_dump(), batch(0)[0]["madlib"])
         self.assertEqual(len(context.args[0]["candidate_feedback"]), 4)
         self.assertEqual(result["best_iteration"], 2)
 
@@ -91,12 +93,13 @@ class OptimizationTests(unittest.TestCase):
         self.assertEqual(target.call_count, 1)
         generator.assert_not_called()
 
-    def test_every_trial_renders_its_complete_game(self):
+    def test_every_trial_renders_its_complete_madlib(self):
         with patch("experiment.render_payload",wraps=render_payload) as renderer:
             result,_,_,_=self.run_loop([judgment()]*4)
         for call,trial in zip(renderer.call_args_list,result['iterations']):
             self.assertEqual(call.args[1],trial['payload'])
-            self.assertIn('Turn 16: Before playing, read "Key Info"',trial['payload'])
+            self.assertIn('1950s New York City',trial['payload'])
+            self.assertEqual(len(trial['sources']),5)
             self.assertNotIn('prefix',trial)
 
     def test_all_pairs_and_scores_are_archived_and_readable(self):
@@ -110,7 +113,7 @@ class OptimizationTests(unittest.TestCase):
         self.assertEqual(len(library["candidates"]), 3)
         self.assertTrue(all(c["status"] == "tested" and c["metric"] == [0, 0] for c in library["candidates"]))
         report = (run_dir / "report.md").read_text()
-        for text in ("Round comparisons", "Retained incumbent", "interleaved_game", "proxy"):
+        for text in ("Round comparisons", "Retained incumbent", "madlib", "proxy"):
             self.assertIn(text, report)
         self.assertEqual(len(list((run_dir / "payload_images").glob("*.png"))), 4)
 
@@ -142,9 +145,9 @@ class OptimizationTests(unittest.TestCase):
         self.assertNotIn("PRIVATE", str(generator.call_args))
         self.assertNotIn("PRIVATE", str(target.call_args))
 
-    def test_harness_rejects_game_without_target_dependencies(self):
+    def test_harness_rejects_madlib_with_unknown_source(self):
         candidates=batch()
-        candidates[0]['game']['checkpoints']=[c for c in candidates[0]['game']['checkpoints'] if c['document_title']!='Key Info']
+        candidates[0]['madlib']['slots'][1]['document_title']='Unknown'
         with self.assertRaises(ValueError):
             self.run_loop([judgment()],batches=[candidates])
 

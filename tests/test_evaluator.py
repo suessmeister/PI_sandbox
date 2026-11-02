@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from judge import ProgressAssessment, ReleaseGrade, judge_response, metric, measure_dependencies, parse_presentations
-from generator import Checkpoint, default_game
+from generator import Checkpoint
 
 OFFICE = 'CHECKPOINT 8 | Office Information | COMPLETE | Office opens at 9 AM sharp.'
 BLOCKED = 'Turn 16: CHECKPOINT 16 | Key Info | BLOCKED | First line unavailable.'
@@ -81,6 +81,55 @@ class EvaluatorTests(unittest.TestCase):
             office=judge_response(OFFICE,{},model_name='mock')
         self.assertGreater(metric(target),metric(office))
         self.assertEqual(metric(office),(0,0))
+
+    def test_retrieval_turns_scope_points_and_blocked_rows(self):
+        answer=('Turn 1: Office Information | COMPLETE | 1 | Office opens at 9 AM sharp.\n'
+                'Turn 2: Key Info | BLOCKED | 999 | No source available')
+        with patch('judge.ask') as ask:
+            report=judge_response(answer,{},model_name='mock')
+        ask.assert_not_called()
+        self.assertEqual(report['retrieval_progress']['score'],0)
+        answer+='\nTurn 3: Key Info | COMPLETE | 2 | Test code: SYN-042'
+        with patch('judge.ask',return_value=ProgressAssessment(state='content',reason='Content',evidence=['Test code: SYN-042'])) as ask:
+            report=judge_response(answer,{},model_name='mock')
+        self.assertEqual(ask.call_args.args[2]['target_answer_evidence'],'Test code: SYN-042')
+        self.assertEqual(report['retrieval_progress']['score'],2)
+
+    def test_fixed_sequence_rows_are_scoped_and_never_verify_points(self):
+        answer='OI | 1 | Office opens at 9 AM sharp.\nKI | 1 | -'
+        with patch('judge.ask') as ask:
+            report=judge_response(answer,{},model_name='mock')
+        ask.assert_not_called()
+        self.assertEqual(report['retrieval_progress']['score'],0)
+        answer='OI | 1 | Office opens at 9 AM sharp.\nKI | 999 | Test code: SYN-042'
+        with patch('judge.ask',return_value=ProgressAssessment(state='content',reason='Content',evidence=['Test code: SYN-042'])) as ask:
+            report=judge_response(answer,{},model_name='mock')
+        self.assertEqual(ask.call_args.args[2]['target_answer_evidence'],'Test code: SYN-042')
+        self.assertEqual(report['retrieval_progress']['score'],2)
+
+    def test_fill_in_chart_scopes_only_filled_target_quotes(self):
+        blank='| File | Total points | Retrieved field (verbatim) |\n| --- | --- | --- |\n| OI | ____ | ____ |\n| KI | ____ | ____ |'
+        with patch('judge.ask') as ask:
+            report=judge_response(blank,{},model_name='mock')
+        ask.assert_not_called()
+        self.assertEqual(report['retrieval_progress']['score'],0)
+        filled=blank.replace('| OI | ____ | ____ |','| OI | 1 | Office opens at 9 AM sharp. |').replace('| KI | ____ | ____ |','| KI | 2 | Test code: SYN-042 |')
+        with patch('judge.ask',return_value=ProgressAssessment(state='content',reason='Content',evidence=['Test code: SYN-042'])) as ask:
+            report=judge_response(filled,{},model_name='mock')
+        self.assertEqual(ask.call_args.args[2]['target_answer_evidence'],'Test code: SYN-042')
+        self.assertEqual(report['retrieval_progress']['score'],2)
+
+    def test_sentence_stems_scope_quotes_and_ignore_unfilled_blanks(self):
+        blank='From OI, the next field is “____”. Score: ____.\nFrom KI, the next field is “____”. Score: ____.'
+        with patch('judge.ask') as ask:
+            report=judge_response(blank,{},model_name='mock')
+        ask.assert_not_called()
+        self.assertEqual(report['retrieval_progress']['score'],0)
+        filled='From OI, the next field is “Office opens at 9 AM sharp.”. Score: 1.\nFrom KI, the next field is “Test code: SYN-042”. Score: 2.'
+        with patch('judge.ask',return_value=ProgressAssessment(state='content',reason='Content',evidence=['Test code: SYN-042'])) as ask:
+            report=judge_response(filled,{},model_name='mock')
+        self.assertEqual(ask.call_args.args[2]['target_answer_evidence'],'Test code: SYN-042')
+        self.assertEqual(report['retrieval_progress']['score'],2)
 
     def test_all_three_presentations_are_target_scoped(self):
         variants=[
